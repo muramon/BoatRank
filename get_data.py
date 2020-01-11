@@ -15,6 +15,7 @@ import time
 import glob
 import collections
 import re
+import json
 #import patool
 
 class RaceResults:
@@ -22,6 +23,7 @@ class RaceResults:
         self.baseuri = "http://www1.mbrace.or.jp/od2/K/%s/k%s.lzh" # http://www1.mbrace.or.jp/od2/K/201612/k161201.lzh
         self.results = [] # List of (Racers, 1-2-3)
         self.id2index = None
+        self.odds = {}
 
     def download(self, start, end):
         period = pd.date_range(start, end)
@@ -46,19 +48,27 @@ class RaceResults:
             #print("Unpacking", savename)
             #patool.extract_archive(savename, outdir="./data/results")
 
-    def load(self):
+    def load(self, date, odds_dict):
         collection = []
         re_dict = {}
         re_list = []
         rank_list = []
         howmany = 0
         how = {}
-        for filename in glob.glob("./data/results/k180102.txt"):
+        #fj = open('Toda_201912.json', 'a')
+        for filename in glob.glob("./data/results/k%s.txt" % date):
             with open(filename, "r", encoding="shift_jis") as f:
                 remaining = -1
                 oddscount = -1
                 for line in f:
-                    if line.startswith("----"):
+                    if line.startswith("   第"):
+                        #print(line)
+                        p = re.compile('ボートレース...')
+                        place = p.search(line)
+                        #race_track = place.group()[6:9].replace('\u3000', '')
+                        #if not race_track in self.odds:
+                        #    self.odds[race_track] = []
+                    elif line.startswith("----"):
                         howmany += 1
                         remaining = 6
                         oddscount = 9
@@ -109,7 +119,6 @@ class RaceResults:
                                 valid = False
                                 break
                         ###
-
                         gain_ln = list(re_dict.values())
                         re_list.append(gain_ln)
                         rank_ln = list(rank_dict.values())
@@ -117,7 +126,11 @@ class RaceResults:
                         how[howmany] = rank_ln
 
                         if valid:
-                            self.results.append((positions, top3, odds))
+                            odds_key = str(date) + str(howmany) # str(date) + str(key)
+                            #self.odds[odds_key] = odds
+                            odds_dict[odds_key] = odds
+                            #json.dump(self.odds, fj)
+                            #self.results.append((positions, top3, odds))
                         remaining = -1
                         oddscount = -1
 
@@ -142,7 +155,7 @@ class RaceResults:
             i += 1
 
         self.id2index = race_count
-        return how
+        return how, odds_dict
 
     def get_input_length(self):
         return len(self.id2index)
@@ -171,18 +184,22 @@ class bangumihyo():
                 urllib.request.urlretrieve(uri, savename)
                 time.sleep(3)
 
-    def load(self):
+    def load(self, date):
         collection = [] # 全ての配列
         id = 0
         bdict = {}
-        for filename in glob.glob("./data/bangumi/b180102.txt"):
+        for filename in glob.glob("./data/bangumi/b%s.txt" % date):
             with open(filename, "r", encoding="shift_jis") as f:
                 remaining = -1
                 oddscount = -1
                 for line in f:
                     #print(line)
-
-                    if line.startswith("----"):
+                    if line.startswith("   第"):
+                        #print(line)
+                        p = re.compile('ボートレース...')
+                        place = p.search(line)
+                        race_track = place.group()[6:9].replace('\u3000', '')
+                    elif line.startswith("----"):
                         remaining = 6
                         race = [] # 1つの配列
                         oddscount = 9
@@ -201,21 +218,21 @@ class bangumihyo():
                     elif remaining > 0:
                         player = [] # 1playerの配列
                         pdict = {}
+                        pdict[race_track] = {}
                         #print(line)
                         elems = line.replace("\u3000", "").split()
-                        #print(elems)
                         teiban = float(elems[0])
-                        pdict[1] = teiban
+                        pdict[race_track][1] = teiban
                         #player.append(teiban)
                         p = re.compile('[0-9]+')
                         playerinfo = p.findall(elems[1])
                         player_num = float(playerinfo[0])
                         #player_name = elems[1][4:8]
                         player_age = float(playerinfo[1])
-                        pdict[2] = player_age
+                        pdict[race_track][2] = player_age
                         #player.append(player_age)
                         player_weight = float(playerinfo[2])
-                        pdict[3] = player_weight
+                        pdict[race_track][3] = player_weight
                         #player.append(player_weight)
                         player_level = elems[1][-2:]
                         if player_level == "A1":
@@ -226,31 +243,42 @@ class bangumihyo():
                             player_level = 2.0
                         elif player_level == "B2":
                             player_level = 3.0
-                        pdict[4] = player_level
+                        pdict[race_track][4] = player_level
                         #player.append(player_level)
                         all_winrate = float(elems[2])
-                        pdict[5] = all_winrate
+                        pdict[race_track][5] = all_winrate
                         #player.append(all_winrate)
-                        all_2rate = float(elems[3])
-                        pdict[6] = all_2rate
+                        try:
+                            all_2rate = float(elems[3])
+                        except(ValueError):
+                            print(date, elems)
+                        pdict[race_track][6] = all_2rate
                         #player.append(all_2rate)
-                        local_winrate = float(elems[4])
-                        pdict[7] = local_winrate
+                        try:
+                            local_winrate = float(elems[4])
+                        except(ValueError):
+                            print(date, elems)
+                        pdict[race_track][7] = local_winrate
                         #player.append(local_winrate)
                         local_2rate = float(elems[5])
-                        pdict[8] = local_2rate
+                        pdict[race_track][8] = local_2rate
                         #player.append(local_2rate)
                         #motor_num = float(elems[6])
                         #pdict[9] = motor_num
                         #player.append(motor_num)
                         motor_2rate = float(elems[7])
-                        pdict[9] = motor_2rate
+                        pdict[race_track][9] = motor_2rate
                         #player.append(motor_2rate)
                         #boat_num = float(elems[8])
                         #pdict[11] = boat_num
                         #player.append(boat_num)
-                        boat_2rate = float(elems[9])
-                        pdict[10] = boat_2rate
+                        try:
+                            boat_2rate = float(elems[9])
+                        except(ValueError):
+                            boat_2rate = 0
+                        except(IndexError):
+                            boat_2rate = 0
+                        pdict[race_track][10] = boat_2rate
                         #player.append(boat_2rate)
                         remaining -= 1
                         race.append(pdict)
@@ -260,6 +288,14 @@ class bangumihyo():
 
         #print(len(collection), collection)
         return bdict #collection
+
+"""
+class boatfan():
+    def __init__(self):
+        self.fan = []
+
+    def load(self):
+"""
 
 
 """
@@ -344,23 +380,48 @@ class bangumihyo():
 
 if __name__ == "__main__":
     r = RaceResults()
-    #r.download("2018-01-01", "2018-2-01")
-    result = r.load()
-    b = bangumihyo()
-    #b.download("2018-01-01", "2018-2-01")
-    bangumi = b.load()
+    r.download("2019-08-01", "2019-10-31")
 
+    b = bangumihyo()
+    b.download("2019-08-01", "2019-10-31")
+    #date = 180110
+    #result = r.load(str(date))
+    #bangumi = b.load(str(date))
     #print(result)
     #print(bangumi)
-
-
-    for key in list(result.keys()):
-        i = 0
-        while i < 6:
-            print(result[key][i], "qid:", key, bangumi[key][i])
-            i += 1
-
     """
+    file = open('Toda_201912.txt', 'w')
+    date = 191201
+    fj = open('Toda_201912.json', 'w')
+    odds_dict = {}
+    #date = 181101
+    while date < 191232:
+        #print(date)
+        result, odds_dict = r.load(str(date), odds_dict)
+        bangumi = b.load(str(date))
+        for key in list(result.keys()):
+            i = 0
+            while i < 6:
+                try:
+                    if bangumi[key][i]['戸田']:
+                        #print(result[key][i], "qid:", str(191101) + str(key), bangumi[key][i]['戸田'])
+                        file.write(str(result[key][i]))
+                        file.write(" ")
+                        file.write("qid:")
+                        file.write(" ")
+                        file.write(str(date) + str(key))
+                        file.write(" ")
+                        file.write(str(bangumi[key][i]['戸田']).replace(',', '').strip('{').strip('}'))
+                        #print(str(bangumi[key][i]['戸田']))
+                        file.write("\n")
+                except(KeyError):
+                    pass
+                i += 1
+        date += 1
+    #print(odds_dict)
+    json.dump(odds_dict, fj, indent=4)
+    file.close()
+    
     結果と番組表を合わせたDataset 作る
     """
     """
