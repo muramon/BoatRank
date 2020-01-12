@@ -15,10 +15,12 @@ class BackTest():
 
 
     def backtest(self, test_ds=None, model=None, odds_json=None, model_type='RankNet'):
-        csv_file = "./backtest_{}_{}.csv".format(model_type, val_file[:-4])
+        model_name = model[-23:]
+        csv_file = "./backtest_{}_model{}_{}.csv".format(model_type, model_name, val_file[:-4])
+        model = torch.load(model)
         fj = open(odds_json, 'r')
         fw = open(csv_file, "w")
-        fw.write("予想順位,実際の順位,単勝,複勝,2連単,2連複,3連単,3連複,拡連複,流し,ボックス\n")
+        fw.write("レース数, 予想順位,実際の順位,単勝,複勝,2連単,2連複,拡連複,3連単,3連複\n")
         writer = csv.writer(fw)
         win_total = 0
         place_total = 0
@@ -28,8 +30,17 @@ class BackTest():
         trifecta_total = 0
         trio_total = 0
         odds_j = json.load(fj)
+        race_num = 0
+        fff = open('batchrankings.txt', 'w')
         for qid, batch_rankings, labels in test_ds:
+            labels, _ = torch.sort(labels, descending=True)
+            fff.write(str(qid))
+            #fff.write(str(batch_rankings))
+            #fff.write('\n')
+            race_num += 1
             pred = model.predict(batch_rankings)
+            fff.write(str(pred))
+            fff.write('\n')
             pred_ar = pred.squeeze(1).detach()
             label_ar = labels.detach()
             _, argsort = torch.sort(pred_ar, descending=True, dim=0)
@@ -91,6 +102,7 @@ class BackTest():
 
             # csv 書き込み
             row = []
+            row.append(qid)
             p_3 = ""
             for p in pred_rank[:3]:
                 p_3 += str(p) + "-"
@@ -110,22 +122,19 @@ class BackTest():
         all_win = win_total + place_total + exacta_total + quinella_total + wide_quinella_total + trifecta_total + trio_total
         print("収支　合計:", all_win)
 
-        fw.write("単勝, 複勝, 2連単, 2連複, 拡連複, 3連単, 3連複, 合計\n")
-        all_row = [win_total, place_total, exacta_total, quinella_total, wide_quinella_total, trifecta_total, trio_total, all_win]
+        fw.write("総レース数, 単勝, 複勝, 2連単, 2連複, 拡連複, 3連単, 3連複, 合計\n")
+        all_row = [race_num, win_total, place_total, exacta_total, quinella_total, wide_quinella_total, trifecta_total, trio_total, all_win]
         writer.writerow(all_row)
 
 if __name__ == "__main__":
-    model_path = torch.load('./models/RankNet-Toda_201911/202001092050')
-    val_file = 'Toda_201912.txt'
+    ranknet_model_path = './models/RankNet-Toda_190801-191130/trained_at_202001122134'
+    lambdarank_model_path = './models/LambdaRank-Toda_190801-191130/trained_at_202001122138'
+    #val_file = 'Toda_191201-191231.txt'
+    val_file = 'Toda_200101-200112.txt'
     val_dataset = L2RDataset(file=val_file, data_id='BOATRACE')
-    #race_results = get_data.RaceResults()
-    #date = 191213
-    #results = race_results.load(str(date))
-
-    #odds =
-
-    #print(odds)
-    odds_json = 'Toda_201912.json'
-    BackTest().backtest(test_ds=val_dataset, model=model_path, odds_json=odds_json, model_type='RankNet')
+    #odds_json = 'Toda_191201-191231.json'
+    odds_json = 'Toda_200101-200112.json'
+    BackTest().backtest(test_ds=val_dataset, model=ranknet_model_path, odds_json=odds_json, model_type='RankNet')
+    BackTest().backtest(test_ds=val_dataset, model=lambdarank_model_path, odds_json=odds_json, model_type='LambdaRank')
 
 
