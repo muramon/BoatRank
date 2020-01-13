@@ -83,7 +83,7 @@ class MSL2RDataLoader(L2RDataLoader):
         if self.scale_data:
             pq_suffix = '_'.join([pq_suffix, 'QS', self.scaler_id])
 
-        self.perquery_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' + pq_suffix + '.np'
+        self.perquery_file = file[:file.find('.txt')].replace('Fold', 'BufferedFold') + '_' + pq_suffix + 'nosort' + '.np' #+
 
     def load_data(self):
         '''
@@ -118,11 +118,105 @@ class MSL2RDataLoader(L2RDataLoader):
                 if self.scale_data:
                     doc_reprs = self.scaler.fit_transform(doc_reprs) #normalization
 
+                #print(doc_reprs)
+
                 doc_labels = sorted_qdf['rele_truth'].values
 
                 # doc_ids    = sorted_qdf['#docid'].values # commented due to rare usage
 
                 list_Qs.append((qid, doc_reprs, doc_labels))
+
+            if self.buffer: pickle_save(list_Qs, file=self.perquery_file)
+
+            return list_Qs
+
+    def load_data_shuffle(self):
+        '''
+        Load data at a per-query unit consisting of {scaled} {des-sorted} document vectors and standard labels
+        :param given_scaler: scaler learned over entire training data, which is only needed for dataset-level scaling
+        :return:
+        '''
+        if self.data_id in MSLETOR:
+            self.num_features = 46
+        elif self.data_id in MSLRWEB:
+            self.num_features = 136
+        elif self.data_id in BOATRACE:
+            self.num_features = 10
+
+        self.feature_cols = [str(f_index) for f_index in range(1, self.num_features + 1)]
+
+        if os.path.exists(self.perquery_file):
+            list_Qs = pickle_load(self.perquery_file)
+            return list_Qs
+        else:
+            self.get_df_file()
+
+            self.ini_scaler()
+
+            list_Qs = []
+            qids = self.df.qid.unique()
+            np.random.shuffle(qids)
+            for qid in qids:
+                df = self.df[self.df.qid == qid]#.sample(flac=1)#.sort_values('rele_truth', ascending=False)
+                shuffled_qdf = df.take(np.random.permutation(len(df)))
+
+                doc_reprs = shuffled_qdf[self.feature_cols].values
+                if self.scale_data:
+                    doc_reprs = self.scaler.fit_transform(doc_reprs)  # normalization
+
+                doc_labels = shuffled_qdf['rele_truth'].values
+
+                # doc_ids    = sorted_qdf['#docid'].values # commented due to rare usage
+
+                list_Qs.append((qid, doc_reprs, doc_labels))
+
+            if self.buffer: pickle_save(list_Qs, file=self.perquery_file)
+
+            return list_Qs
+
+    def load_data_nosort(self):
+        '''
+        Load data at a per-query unit consisting of {scaled} {des-sorted} document vectors and standard labels
+        :param given_scaler: scaler learned over entire training data, which is only needed for dataset-level scaling
+        :return:
+        '''
+        if self.data_id in MSLETOR:
+            self.num_features = 46
+        elif self.data_id in MSLRWEB:
+            self.num_features = 136
+        elif self.data_id in BOATRACE:
+            self.num_features = 10
+
+        self.feature_cols = [str(f_index) for f_index in range(1, self.num_features + 1)]
+
+        if os.path.exists(self.perquery_file):
+            list_Qs = pickle_load(self.perquery_file)
+            return list_Qs
+        else:
+            self.get_df_file()
+
+            self.ini_scaler()
+
+            list_Qs = []
+            qids = self.df.qid.unique()
+            np.random.shuffle(qids)
+            for qid in qids:
+                #sorted_qdf = self.df[self.df.qid == qid].sort_values('rele_truth', ascending=False)
+                no_sorted_qdf = self.df[self.df.qid == qid]
+                #print(no_sorted_qdf)
+
+                doc_reprs = no_sorted_qdf[self.feature_cols].values
+                if self.scale_data:
+                    doc_reprs = self.scaler.fit_transform(doc_reprs)  # normalization
+
+                print(doc_reprs)
+
+                doc_labels = no_sorted_qdf['rele_truth'].values
+
+                # doc_ids    = sorted_qdf['#docid'].values # commented due to rare usage
+
+                list_Qs.append((qid, doc_reprs, doc_labels))
+                #print(list_Qs)
 
             if self.buffer: pickle_save(list_Qs, file=self.perquery_file)
 
@@ -188,7 +282,7 @@ class MSL2RDataLoader(L2RDataLoader):
             df[c] = df[c].astype(np.float32)
 
         df['rele_binary'] = (df['rele_truth'] > 0).astype(np.float32)  # additional binarized column for later filtering
-
+        #print(df)
         return df
 
 
@@ -236,7 +330,13 @@ class L2RDataset(data.Dataset):
         else:
             self.list_torch_Qs = []
 
-            list_Qs = loader.load_data()
+            # sorted
+            #list_Qs = loader.load_data()
+            # no sorted
+            list_Qs = loader.load_data_nosort()
+            # shuffle
+            #list_Qs = loader.load_data_shuffle()
+            #print(list_Qs)
             list_inds = list(range(len(list_Qs)))
             for ind in list_inds:
                 qid, doc_reprs, doc_labels = list_Qs[ind]
