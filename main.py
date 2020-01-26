@@ -1,56 +1,35 @@
+from get_data import mk_dataset
+from backtest import BackTest
+from train import train
 from dataloader import L2RDataset
-from train_test import train_step, test_step, precision
-from design_model import design_model
-from model import RankNet
-import torch
-import torch.nn as nn
-import datetime
-import os
 
-seed = 5
-torch.manual_seed(seed=seed)
+def main(place):
+    date_trains = 190801
+    date_trainl = 191031
+    date_vals = 191101
+    date_vall = 191130
+    date_tests = 191201
+    date_testl = 191231
+
+    mk_dataset(date_trains, date_trainl, place)
+    mk_dataset(date_vals, date_vall, place)
+    mk_dataset(date_tests, date_testl, place)
+
+    train(trains=date_trains, trainl=date_trainl, vals=date_vals, vall=date_vall, place=place)
+    dataset = '{}_{}-{}'.format(place, date_trains, date_trainl)
+
+    ranknet_model_path = './models/{}-{}-{}'.format('RankNet', dataset, place)
+    lambdarank_model_path = './models/{}-{}-{}'.format('LambdaRank', dataset, place)
+    test_file = 'dataset/{}_{}-{}.txt'.format(place, date_tests, date_testl)
+    test_dataset = L2RDataset(file=test_file, data_id='BOATRACE')
+    odds_json = 'dataset/{}_{}-{}.json'.format(place, date_tests, date_testl)
+    BackTest().backtest(test_ds=test_dataset, model=ranknet_model_path, odds_json=odds_json, test_file=test_file, model_type='RankNet',
+                        kaijo=place, Shuffle=False)
+    BackTest().backtest(test_ds=test_dataset, model=lambdarank_model_path, odds_json=odds_json, test_file=test_file, model_type='LambdaRank',
+                        kaijo=place, Shuffle=False)
 
 if __name__ == '__main__':
-
-    now = datetime.datetime.now()
-    now = "{0:%Y%m%d%H%M}".format(now)
-
-    train_file = 'Toda_201911.txt'
-    dataset = 'Toda_201911'
-    val_file = 'Toda_201912.txt'
-    train_ds = L2RDataset(file=train_file, data_id='BOATRACE')
-    val_ds = L2RDataset(file=val_file, data_id='BOATRACE')
-
-    max_epoch = 30
-    dims = [10, 20, 10, 5]
-    actf1 = nn.ReLU()
-
-    layers = design_model(actf1, dims)
-    rank_type = "RankNet"
-    model = RankNet(layers)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-    best_val_ndcg_score = 0
-
-    for epoch in range(max_epoch):
-        epoch_train_loss = train_step(model, train_ds, optimizer)
-        print("Epoch: {} Train Loss: {}".format(epoch, epoch_train_loss))
-        epoch_train_dcg = test_step(model, train_ds)
-        #epoch_p = precision(model, train_ds)
-        epoch_val_dcg = test_step(model, val_ds)
-        for k in [1, 2, 3]:
-            print("Epoch: {} Train nDCG@{}: {}".format(epoch, k, epoch_train_dcg[k]))
-        #print("Epoch: {} Train P: {}".format(epoch, epoch_p))
-        if epoch_val_dcg[3] > best_val_ndcg_score:
-            best_epoch = epoch
-            best_loss = epoch_train_loss
-            best_val_ndcg_score = epoch_val_dcg[1]
-
-            if not os.path.exists(
-                    './models/{}-{}'.format(rank_type, dataset)):
-                os.makedirs(
-                    './models/{}-{}'.format(rank_type, dataset))
-            torch.save(model,
-                       './models/{}-{}/{}'.format(rank_type, dataset, now))
-        print("--" * 50)
-
+    for place in ["住之江", "尼崎", "鳴門", "丸亀", "児島",
+                  "宮島", "徳山", "下関", "若松", "芦屋", "福岡", "唐津"]:# "戸田", "大村" "桐生", "江戸川", "平和島","多摩川", "浜名湖", "蒲郡", "常滑", "津", "三国",
+        main(place=place)
+        #"びわこ"まだ
