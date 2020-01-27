@@ -289,6 +289,157 @@ class bangumihyo():
         #print(len(collection), collection)
         return bdict #collection
 
+
+class RaceResults123:
+    def __init__(self):
+        self.baseuri = "http://www1.mbrace.or.jp/od2/K/%s/k%s.lzh" # http://www1.mbrace.or.jp/od2/K/201612/k161201.lzh
+        self.results = [] # List of (Racers, 1-2-3)
+        self.id2index = None
+        self.odds = {}
+
+    def download(self, start, end):
+        period = pd.date_range(start, end)
+
+        for date in period:
+            # Get file from the website
+            dirname = date.strftime("%Y%m")
+            lzhname = date.strftime("%y%m%d")
+            uri = self.baseuri % (dirname, lzhname)
+            savename = "./data/results/lzh/%s.lzh" % lzhname
+            if not os.path.exists(savename):
+                print("Send request to", uri)
+                urllib.request.urlretrieve(uri, savename)
+                time.sleep(3)
+
+            # lhaコマンドで解凍
+
+            # The following unpack part didn't work my Windows environment...
+            # Unpack lzh files
+            #unpackedname = "./data/results/K%s.TXT" % lzhname
+            #if not os.path.exists(unpackedname):
+            #print("Unpacking", savename)
+            #patool.extract_archive(savename, outdir="./data/results")
+
+    def load(self, date, odds_dict):
+        collection = []
+        re_dict = {}
+        re_list = []
+        rank_list = []
+        howmany = 0
+        how = {}
+        #fj = open('Toda_201912.json', 'a')
+        for filename in glob.glob("./data/results/k%s.txt" % date):
+            with open(filename, "r", encoding="shift_jis") as f:
+                remaining = -1
+                oddscount = -1
+                for line in f:
+                    if line.startswith("   第"):
+                        #print(line)
+                        p = re.compile('ボートレース...')
+                        place = p.search(line)
+                        #race_track = place.group()[6:9].replace('\u3000', '')
+                        #if not race_track in self.odds:
+                        #    self.odds[race_track] = []
+                    elif line.startswith("----"):
+                        howmany += 1
+                        remaining = 6
+                        oddscount = 9
+                        positions = [None] * 6
+                        top3 = [None] * 3
+                        odds = []
+                        rank_dict = {}
+                    elif remaining > 0:
+                        elems = line.replace("\u3000", "").split()
+                        id = int(elems[2])
+                        pos = int(elems[1]) - 1
+                        positions[pos] = id
+                        if int(elems[1]) <= 3:
+                            rank_dict[id] = 4 - int(elems[1])
+                        else:
+                            rank_dict[id] = 0
+                        #if howmany == 63:
+                            #print("63", rank_dict)
+                        p = re.compile('0[0-9]+')
+                        if p.findall(elems[0]):
+                            gain = 6 - int(elems[0][-1])
+                        else:
+                            gain = 0
+                        #print(rank)
+                        re_dict[pos] = gain
+                        if elems[0] == "01": top3[0] = pos
+                        elif elems[0] == "02": top3[1] = pos
+                        elif elems[0] == "03": top3[2] = pos
+                        collection.append(id)
+                        remaining -= 1
+                    elif oddscount > 0:
+                        elems = line.split()
+                        if len(elems) > 0:
+                            try:
+                                if oddscount == 8:
+                                    odds.append((elems[1], int(elems[2]))) # 複勝1
+                                    odds.append((elems[3], int(elems[4]))) # 複勝2
+                                elif oddscount == 4 or oddscount == 3:
+                                    odds.append((elems[0], int(elems[1]))) # 拡連複2, 3
+                                else:
+                                    # 単勝, 2連単, 2連複, 拡連複1, 3連単, 3連複
+                                    odds.append((elems[1], int(elems[2])))
+                                oddscount -= 1
+                            except:
+                                oddscount = -1 # ignore this
+                    elif remaining == 0 and oddscount == 0:
+                        valid = (len(odds) == 10)
+                        for check in positions + top3:
+                            if check is None:
+                                print("check how many")
+                                valid = False
+                                break
+                        ###
+                        gain_ln = list(re_dict.values())
+                        re_list.append(gain_ln)
+                        rank_ln = list(rank_dict.values())
+                        rank_list.append(rank_ln)
+                        how[howmany] = rank_ln
+
+                        if valid:
+                            odds_key = str(date) + str(howmany) # str(date) + str(key)
+                            #self.odds[odds_key] = odds
+                            odds_dict[odds_key] = odds
+                            #json.dump(self.odds, fj)
+                            #self.results.append((positions, top3, odds))
+                        remaining = -1
+                        oddscount = -1
+
+        race_count = collections.Counter(collection)
+        race_count[10000] = 0
+        #print(len(re_list), re_list)
+        #print(len(rank_list), rank_list)
+
+        """
+        remove = []
+        for k, v in race_count.items():
+            if v < 10:
+                remove.append(k)
+                race_count[10000] += 0 # Merge with unknown racer (=No 10000)
+
+        for k in remove:
+            race_count.pop(k)
+        """
+        i = 0
+        for k in race_count.keys():
+            race_count[k] = i
+            i += 1
+
+        self.id2index = race_count
+        return how, odds_dict
+
+    def get_input_length(self):
+        return len(self.id2index)
+
+    def get_input(self, id):
+        return self.id2index.get(id, self.id2index[10000])
+
+
+
 """
 class boatfan():
     def __init__(self):
@@ -377,53 +528,82 @@ class boatfan():
 
 """
 
-
-if __name__ == "__main__":
+def mk_dataset(dates, datel, place):
     r = RaceResults()
-    r.download("2019-08-01", "2019-10-31")
-
     b = bangumihyo()
-    b.download("2019-08-01", "2019-10-31")
-    #date = 180110
-    #result = r.load(str(date))
-    #bangumi = b.load(str(date))
-    #print(result)
-    #print(bangumi)
-    """
-    file = open('Toda_201912.txt', 'w')
-    date = 191201
-    fj = open('Toda_201912.json', 'w')
+    file = open('dataset/{}_{}-{}.txt'.format(place, dates, datel), 'w')
+    date = dates
+    fj = open('dataset/{}_{}-{}.json'.format(place, dates, datel), 'w')
     odds_dict = {}
-    #date = 181101
-    while date < 191232:
-        #print(date)
-        result, odds_dict = r.load(str(date), odds_dict)
-        bangumi = b.load(str(date))
-        for key in list(result.keys()):
-            i = 0
-            while i < 6:
-                try:
-                    if bangumi[key][i]['戸田']:
-                        #print(result[key][i], "qid:", str(191101) + str(key), bangumi[key][i]['戸田'])
-                        file.write(str(result[key][i]))
-                        file.write(" ")
-                        file.write("qid:")
-                        file.write(" ")
-                        file.write(str(date) + str(key))
-                        file.write(" ")
-                        file.write(str(bangumi[key][i]['戸田']).replace(',', '').strip('{').strip('}'))
-                        #print(str(bangumi[key][i]['戸田']))
-                        file.write("\n")
-                except(KeyError):
-                    pass
-                i += 1
+    while date <= datel:
+        date_txt = "k{}.txt".format(date)
+        if date_txt in os.listdir("./data/results"):
+            result, odds_dict = r.load(str(date), odds_dict)
+            bangumi = b.load(str(date))
+            for key in list(result.keys()):
+                i = 0
+                while i < 6:
+                    try:
+                        if bangumi[key][i][place]:
+                            # print(result[key][i], "qid:", str(191101) + str(key), bangumi[key][i][place])
+                            file.write(str(result[key][i]))
+                            file.write(" ")
+                            file.write("qid:")
+                            file.write(" ")
+                            file.write(str(date) + str(key))
+                            file.write(" ")
+                            file.write(str(bangumi[key][i][place]).replace(',', '').strip('{').strip('}'))
+                            # print(str(bangumi[key][i][place]))
+                            file.write("\n")
+                    except(KeyError):
+                        pass
+                    i += 1
         date += 1
-    #print(odds_dict)
+    # print(odds_dict)
     json.dump(odds_dict, fj, indent=4)
     file.close()
-    
-    結果と番組表を合わせたDataset 作る
-    """
-    """
-    Player情報のDatabase作って，Datasetの特徴量に追加
-    """
+
+
+def mk_dataset123(dates, datel, place):
+    r = RaceResults123()
+    b = bangumihyo()
+    file = open('dataset/123{}_{}-{}.txt'.format(place, dates, datel), 'w')
+    date = dates
+    fj = open('dataset/{}_{}-{}.json'.format(place, dates, datel), 'w')
+    odds_dict = {}
+    while date <= datel:
+        date_txt = "k{}.txt".format(date)
+        if date_txt in os.listdir("./data/results"):
+            result, odds_dict = r.load(str(date), odds_dict)
+            bangumi = b.load(str(date))
+            for key in list(result.keys()):
+                i = 0
+                while i < 6:
+                    try:
+                        if bangumi[key][i][place]:
+                            # print(result[key][i], "qid:", str(191101) + str(key), bangumi[key][i][place])
+                            file.write(str(result[key][i]))
+                            file.write(" ")
+                            file.write("qid:")
+                            file.write(" ")
+                            file.write(str(date) + str(key))
+                            file.write(" ")
+                            file.write(str(bangumi[key][i][place]).replace(',', '').strip('{').strip('}'))
+                            # print(str(bangumi[key][i][place]))
+                            file.write("\n")
+                    except(KeyError):
+                        pass
+                    i += 1
+        date += 1
+    # print(odds_dict)
+    json.dump(odds_dict, fj, indent=4)
+    file.close()
+
+
+if __name__ == "__main__":
+    dates=190801
+    datel=191031
+    place='戸田'
+    mk_dataset(dates, datel, place)
+
+
