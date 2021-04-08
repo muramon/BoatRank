@@ -209,7 +209,7 @@ class MSL2RDataLoader(L2RDataLoader):
                 if self.scale_data:
                     doc_reprs = self.scaler.fit_transform(doc_reprs)  # normalization
 
-                print(doc_reprs)
+                # print(doc_reprs)
 
                 doc_labels = no_sorted_qdf['rele_truth'].values
 

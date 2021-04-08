@@ -5,16 +5,16 @@ from get_data import bangumihyo
 import numpy as np
 
 
-def mk_ds(date, place='Toda'):
+def mk_ds(date, place='戸田'):
     b = bangumihyo()
-    file = open('{}_20{}.txt'.format(place, str(date)), 'w')
+    file = open('dataset/{}_20{}.txt'.format(place, str(date)), 'w')
     bangumi = b.load(str(date))
     key = 1
     while key <= len(bangumi):
         i = 0
         while i < 6:
             try:
-                if bangumi[key][i]['戸田']:
+                if bangumi[key][i][place]:
                     # print(result[key][i], "qid:", str(191101) + str(key), bangumi[key][i]['戸田'])
                     file.write(str(5-i))
                     file.write(" ")
@@ -22,7 +22,7 @@ def mk_ds(date, place='Toda'):
                     file.write(" ")
                     file.write(str(date) + str(key))
                     file.write(" ")
-                    file.write(str(bangumi[key][i]['戸田']).replace(',', '').strip('{').strip('}'))
+                    file.write(str(bangumi[key][i][place]).replace(',', '').strip('{').strip('}'))
                     # print(str(bangumi[key][i]['戸田']))
                     file.write("\n")
             except(KeyError):
@@ -34,7 +34,7 @@ def mk_ds(date, place='Toda'):
 
 def predict(model=None, date=None, place=None):
     ranknet_model_path = torch.load(model)
-    pred_file = '{}_20200109.txt'.format(place)#, date)
+    pred_file = 'dataset/{}_20200109.txt'.format(place)#, date)
     predict_dataset = L2RDataset(file=pred_file, data_id='BOATRACE')
 
     for qid, batch_rankings, labels in predict_dataset:
@@ -54,7 +54,8 @@ def predict(model=None, date=None, place=None):
 if __name__ == "__main__":
     seed = 5
     torch.manual_seed(seed=seed)
+    place = '戸田'
     mk_ds(200109)
-    predict(model='./models/RankNet-Toda_201908-10/202001122029', date=200109, place='Toda')
+    predict(model='./models/RankNet-Toda_201908-10/202001122029', date=200109, place=place)
 
 
