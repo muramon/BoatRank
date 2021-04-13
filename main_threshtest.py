@@ -1,5 +1,5 @@
 from get_data import mk_dataset, mk_dataset123
-from backtest_Threshold_check import BackTest
+from backtest_threshold_check_sanrenpuku import BackTest
 from train import train
 from dataloader import L2RDataset
 
@@ -55,5 +55,5 @@ if __name__ == '__main__':
     for place in ["住之江", "尼崎", "鳴門", "丸亀", "児島", "大村", "桐生", "江戸川", "平和島", "多摩川", "浜名湖", "蒲郡", "常滑", "津", "三国",
                   "宮島", "徳山", "下関", "若松", "芦屋", "福岡", "唐津"]:#
     # place = '平和島'
-        main(place=place, mkds=False, train_=True, three=False, mxepoch=20)
+        main(place=place, mkds=False, train_=False, three=False, mxepoch=20)
         #"びわこ"まだ
