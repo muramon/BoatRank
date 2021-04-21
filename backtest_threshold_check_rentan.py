@@ -26,7 +26,7 @@ class BackTest():
         if three:
             fall = open('./backtest/123_triu_all_backtest.csv', 'a')
         else:
-            fall = open('./nirentan_thresh_test/niren_long_all_backtest.csv', 'a')
+            fall = open('./nirentan_thresh_test/{}_long_all_backtest.csv'.format(model_type), 'a')
         writerfall = csv.writer(fall)
         fwwrite = "レース数, 予想順位,実際の順位"
         win_total = {}
@@ -34,7 +34,7 @@ class BackTest():
         for i in range(41):
             win_total[i] = 0
             count[i] = 0
-            threshold = "," + str(100 * (i + 2)) + "~" + str(100 * (i + 3))
+            threshold = "," + str(100 * (i + 1)) + "~" + str(100 * (i + 2))
             fwwrite += threshold
         fwwrite += "\n"
         fw.write(fwwrite)
@@ -106,12 +106,12 @@ class BackTest():
             except(ValueError):
                 continue
         for i in range(41):
-            print("単勝 ", 100 * (i + 2), "~", 100 * (i + 3), ":", win_total[i])
+            print("単勝 ", 100 * (i + 1), "~", 100 * (i + 2), ":", win_total[i])
 
 
         totalwrite = "総レース数"
         for i in range(41):
-            total = "," + str(100 * (i + 2)) + "~" + str(100 * (i + 3))
+            total = "," + str(100 * (i + 1)) + "~" + str(100 * (i + 2))
             totalwrite += total
         totalwrite += ", 2200~, \n"
         fw.write(totalwrite)
@@ -130,7 +130,8 @@ class BackTest():
         writer.writerow(count_row)
 
         all_rows = [kaijo]
-        all_rows += all_row
+        for i in range(41):
+            all_rows += [win_total[i], count[i]]
         writerfall.writerow(all_rows)
 
 if __name__ == "__main__":
