@@ -1,5 +1,5 @@
 from get_data import mk_dataset, mk_dataset123
-from backtest_threshold_check_sanrentan import BackTest
+from backtest_threshold_check_hukusho import BackTest
 from train import train
 from dataloader import L2RDataset
 
