@@ -9,13 +9,15 @@
 
 import numpy as np
 import pandas as pd
-import urllib
+import urllib.request
 import os
 import time
 import glob
 import collections
 import re
 import json
+from data.bangumi.kaito import kaito_bangumi
+from data.results.kaito import kaito_result
 #import patool
 
 class RaceResults:
@@ -172,7 +174,6 @@ class bangumihyo():
 
     def download(self, start, end):
         period = pd.date_range(start, end)
-
         for date in period:
             # Get file from the website
             dirname = date.strftime("%Y%m")
@@ -528,9 +529,16 @@ class boatfan():
 
 """
 
-def mk_dataset(dates, datel, place):
+def mk_dataset(dates, datel, place, download=False):
     r = RaceResults()
     b = bangumihyo()
+    if download:
+        r.download("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+        b.download("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+        # kaito
+        kaito_result("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+        kaito_bangumi("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+
     file = open('dataset/{}_{}-{}.txt'.format(place, dates, datel), 'w')
     date = dates
     fj = open('dataset/{}_{}-{}.json'.format(place, dates, datel), 'w')
@@ -601,9 +609,9 @@ def mk_dataset123(dates, datel, place):
 
 
 if __name__ == "__main__":
-    dates=190801
-    datel=191031
-    place='戸田'
-    mk_dataset(dates, datel, place)
-
+    dates=210414
+    datel=210415
+    place='平和島'
+    mk_dataset(dates, datel, place, download=True)
+    # print("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
 
