@@ -184,6 +184,10 @@ class bangumihyo():
                 print("Send request to", uri)
                 urllib.request.urlretrieve(uri, savename)
                 time.sleep(3)
+        # kaito
+        kaito_result("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+        kaito_bangumi("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+
 
     def load(self, date):
         collection = [] # 全ての配列
@@ -535,10 +539,6 @@ def mk_dataset(dates, datel, place, download=False):
     if download:
         r.download("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
         b.download("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
-        # kaito
-        kaito_result("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
-        kaito_bangumi("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
-
     file = open('dataset/{}_{}-{}.txt'.format(place, dates, datel), 'w')
     date = dates
     fj = open('dataset/{}_{}-{}.json'.format(place, dates, datel), 'w')
