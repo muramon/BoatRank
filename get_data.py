@@ -40,6 +40,7 @@ class RaceResults:
                 print("Send request to", uri)
                 urllib.request.urlretrieve(uri, savename)
                 time.sleep(3)
+        kaito_result(start, end)
 
             # lhaコマンドで解凍
 
@@ -185,9 +186,9 @@ class bangumihyo():
                 urllib.request.urlretrieve(uri, savename)
                 time.sleep(3)
         # kaito
-        kaito_result("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
-        kaito_bangumi("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
-
+        # kaito_result("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+        # kaito_bangumi("20{}-{}-{}".format(str(dates)[0:2], str(dates)[2:4], str(dates)[4:6]), "20{}-{}-{}".format(str(datel)[0:2], str(datel)[2:4], str(datel)[4:6]))
+        kaito_bangumi(start, end)
 
     def load(self, date):
         collection = [] # 全ての配列
