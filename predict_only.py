@@ -7,7 +7,8 @@ import numpy as np
 
 def mk_ds(date, place='戸田'):
     b = bangumihyo()
-    file = open('dataset/{}_20{}.txt'.format(place, str(date)), 'w')
+    file = open('dataset/predict_{}_20{}.txt'.format(place, str(date)), 'w')
+    b.download("20{}-{}-{}".format(str(date)[0:2], str(date)[2:4], str(date)[4:6]), "20{}-{}-{}".format(str(date)[0:2], str(date)[2:4], str(date)[4:6]))
     bangumi = b.load(str(date))
     key = 1
     while key <= len(bangumi):
@@ -15,15 +16,14 @@ def mk_ds(date, place='戸田'):
         while i < 6:
             try:
                 if bangumi[key][i][place]:
-                    # print(result[key][i], "qid:", str(191101) + str(key), bangumi[key][i]['戸田'])
-                    file.write(str(5-i))
+                    file.write(str(1))
                     file.write(" ")
                     file.write("qid:")
                     file.write(" ")
                     file.write(str(date) + str(key))
                     file.write(" ")
                     file.write(str(bangumi[key][i][place]).replace(',', '').strip('{').strip('}'))
-                    # print(str(bangumi[key][i]['戸田']))
+                    # print(str(bangumi[key][i][place]))
                     file.write("\n")
             except(KeyError):
                 pass
@@ -34,8 +34,9 @@ def mk_ds(date, place='戸田'):
 
 def predict(model=None, date=None, place=None):
     ranknet_model_path = torch.load(model)
-    pred_file = 'dataset/{}_20200109.txt'.format(place)#, date)
+    pred_file = 'dataset/predict_{}_20{}.txt'.format(place, str(date))
     predict_dataset = L2RDataset(file=pred_file, data_id='BOATRACE')
+    predicted = open('predicted/predicted_{}_20{}.txt'.format(place, str(date)), 'w')
 
     for qid, batch_rankings, labels in predict_dataset:
         labels, _ = torch.sort(labels, descending=True)
@@ -48,6 +49,9 @@ def predict(model=None, date=None, place=None):
         prediction_label = label_ar[argsort]
         six_np = np.array([6, 6, 6, 6, 6, 6])
         pred_rank = six_np - prediction_label.numpy().astype(np.int64)
+        predicted.write(str(qid))
+        predicted.write(str(pred_rank))
+        predicted.write('\n')
         print(qid, pred_rank)
 
 
@@ -55,7 +59,8 @@ if __name__ == "__main__":
     seed = 5
     torch.manual_seed(seed=seed)
     place = '戸田'
-    mk_ds(200109)
-    predict(model='./models/RankNet-Toda_201908-10/202001122029', date=200109, place=place)
+    datep=210422
+    mk_ds(datep, place=place)
+    predict(model='./models/RankNet-平和島_180101-190531-平和島', date=datep, place=place)
 
 
