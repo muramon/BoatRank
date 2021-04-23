@@ -264,7 +264,12 @@ class bangumihyo():
                             local_winrate = float(elems[4])
                         except(ValueError):
                             print(date, elems)
-                        pdict[race_track][7] = local_winrate
+                        try:
+                            pdict[race_track][7] = local_winrate
+                        except(ValueError):
+                            print(date, elems)
+                        except(UnboundLocalError):
+                            print("UnboundLocalError")
                         #player.append(local_winrate)
                         local_2rate = float(elems[5])
                         pdict[race_track][8] = local_2rate
@@ -272,8 +277,10 @@ class bangumihyo():
                         #motor_num = float(elems[6])
                         #pdict[9] = motor_num
                         #player.append(motor_num)
-                        motor_2rate = float(elems[7])
-                        pdict[race_track][9] = motor_2rate
+                        try:
+                            motor_2rate = float(elems[7])
+                        except(ValueError):
+                            pdict[race_track][9] = motor_2rate
                         #player.append(motor_2rate)
                         #boat_num = float(elems[8])
                         #pdict[11] = boat_num
